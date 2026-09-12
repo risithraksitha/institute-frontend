@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-card,
+  #printable-card * {
+    visibility: visible;
+  }
+
+  #printable-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+#reader {
+  width: 100% !important;
+  border: none !important;
+}
+
+#reader video {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 1rem !important;
+  object-fit: cover !important;
+}
+
+#reader video:not(:first-of-type) {
+  display: none !important;
+}
