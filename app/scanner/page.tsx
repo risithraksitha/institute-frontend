@@ -296,14 +296,27 @@ export default function ScannerPage() {
                 formatsToSupport: [
                     Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.CODE_39
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.UPC_A
                 ],
-                verbose: false
+                verbose: false,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
             });
             activeScanner = scanner;
             scannerRef.current = scanner;
 
-            const scanConfig = { fps: 10, qrbox: { width: 260, height: 260 } };
+            const scanConfig = {
+                fps: 15,
+                qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const edge = Math.max(Math.floor(minEdge * 0.85), 240);
+                    return { width: edge, height: edge };
+                },
+                aspectRatio: 1.0
+            };
 
             try {
                 // Try back camera first; if on PC or laptop webcam, fallback to user facing

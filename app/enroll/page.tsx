@@ -262,7 +262,7 @@ export default function EnrollPage() {
                                                         {cls.teacher_name && (
                                                             <span className="flex items-center gap-1">
                                                                 <User className="w-3 h-3 text-slate-500" />
-                                                                {cls.teacher_name}
+                                                                {cls.teacher_name} {cls.teacher_contact && cls.teacher_contact !== 'N/A' ? `• 📞 ${cls.teacher_contact}` : ''}
                                                             </span>
                                                         )}
                                                         {cls.schedule_time && (
