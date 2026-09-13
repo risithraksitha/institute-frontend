@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { BookOpen, Calendar, Clock, DollarSign, Plus, Trash2, User, GraduationCap, Layers } from "lucide-react";
+import { BookOpen, Calendar, Clock, DollarSign, Plus, Trash2, User, GraduationCap, Layers, Search, CheckCircle2 } from "lucide-react";
 
 interface ClassItem {
     id: number;
@@ -28,6 +28,8 @@ export default function ClassesPage() {
     const [classes, setClasses] = useState<ClassItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState<string>("ALL");
+    const [searchQuery, setSearchQuery] = useState<string>("");
 
     const [form, setForm] = useState({
         subject: "",
@@ -131,6 +133,37 @@ export default function ClassesPage() {
 
     const totalFees = classes.reduce((acc, c) => acc + Number(c.fee_amount), 0);
     const avgFee = classes.length > 0 ? Math.round(totalFees / classes.length) : 0;
+
+    const scheduleTabs = [
+        { id: "ALL", label: "All Classes", count: classes.length },
+        { id: "SATURDAY", label: "Saturday", count: classes.filter(c => (c.schedule_time || "").toLowerCase().includes("sat")).length },
+        { id: "SUNDAY", label: "Sunday", count: classes.filter(c => (c.schedule_time || "").toLowerCase().includes("sun")).length },
+        { id: "WEEKDAYS", label: "Weekdays", count: classes.filter(c => {
+            const s = (c.schedule_time || "").toLowerCase();
+            return s.includes("mon") || s.includes("tue") || s.includes("wed") || s.includes("thu") || s.includes("fri") || s.includes("weekday");
+        }).length },
+        { id: "DAILY", label: "☀️ Daily Pass", count: classes.filter(c => c.fee_type === "DAILY").length },
+        { id: "MONTHLY", label: "📅 Monthly", count: classes.filter(c => (c.fee_type || "MONTHLY") === "MONTHLY").length },
+    ];
+
+    const filteredClasses = classes.filter((c) => {
+        const matchesSearch = searchQuery.trim() === "" ||
+            c.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.teacher_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.grade_batch?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.schedule_time?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        const sched = (c.schedule_time || "").toLowerCase();
+        if (activeTab === "ALL") return true;
+        if (activeTab === "SATURDAY") return sched.includes("sat");
+        if (activeTab === "SUNDAY") return sched.includes("sun");
+        if (activeTab === "WEEKDAYS") return sched.includes("mon") || sched.includes("tue") || sched.includes("wed") || sched.includes("thu") || sched.includes("fri") || sched.includes("weekday");
+        if (activeTab === "DAILY") return c.fee_type === "DAILY";
+        if (activeTab === "MONTHLY") return (c.fee_type || "MONTHLY") === "MONTHLY";
+        return true;
+    });
 
     return (
         <div className="p-8 sm:p-10 max-w-7xl mx-auto space-y-10">
@@ -423,28 +456,90 @@ export default function ClassesPage() {
                     </form>
                 </div>
 
-                {/* Active Courses List (7 cols) */}
-                <div className="lg:col-span-7 space-y-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                            <BookOpen size={20} className="text-emerald-400" />
-                            Active Scheduled Classes
-                        </h2>
-                        <span className="text-xs text-slate-400">{classes.length} Courses Offered</span>
+                {/* Active Courses List & Schedule Tabs (7 cols) */}
+                <div className="lg:col-span-7 space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                                <BookOpen size={20} className="text-emerald-400" />
+                                Active Class Schedule
+                            </h2>
+                            <p className="text-xs text-slate-400 mt-0.5">Filter courses by timetable slot or billing schedule</p>
+                        </div>
+                        <span className="text-xs font-bold text-blue-400 bg-blue-500/15 border border-blue-500/20 px-3 py-1 rounded-full self-start sm:self-auto">
+                            {filteredClasses.length} of {classes.length} Courses
+                        </span>
+                    </div>
+
+                    {/* Search & Quick Filter Bar */}
+                    <div className="relative">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Filter by subject, teacher name, batch or schedule..."
+                            className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 rounded-2xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition shadow-inner"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 hover:text-white font-bold"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Schedule Tabs */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
+                        {scheduleTabs.map((tab) => {
+                            const isTabActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                                        isTabActive
+                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-102"
+                                            : "bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 border border-white/5"
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                        isTabActive ? "bg-white/20 text-white" : "bg-white/5 text-slate-400"
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {loading ? (
                         <div className="p-12 text-center text-slate-400 font-medium animate-pulse">Loading scheduled classes...</div>
-                    ) : classes.length === 0 ? (
-                        <div className="p-12 text-center bg-white/5 rounded-3xl border border-white/10 text-slate-400">
-                            No classes scheduled yet. Add your first class using the form on the left.
+                    ) : filteredClasses.length === 0 ? (
+                        <div className="p-12 text-center bg-white/5 rounded-3xl border border-white/10 text-slate-400 space-y-3">
+                            <Clock className="w-10 h-10 text-slate-500 mx-auto opacity-60" />
+                            <p className="font-bold text-white text-sm">No classes found in this schedule tab</p>
+                            <p className="text-xs text-slate-400">Try selecting a different schedule tab or clear your search term.</p>
+                            {(activeTab !== "ALL" || searchQuery) && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setActiveTab("ALL"); setSearchQuery(""); }}
+                                    className="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                                >
+                                    View All Scheduled Classes
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {classes.map((c) => (
+                            {filteredClasses.map((c) => (
                                 <div
                                     key={c.id}
-                                    className="bg-white/5 hover:bg-white/10 transition-all duration-300 p-6 rounded-3xl border border-white/10 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                                    className="bg-white/5 hover:bg-white/10 transition-all duration-300 p-6 rounded-3xl border border-white/10 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:-translate-y-0.5"
                                 >
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 flex-wrap">
